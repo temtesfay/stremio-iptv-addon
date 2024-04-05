@@ -1,15 +1,15 @@
-// Get ClientId and ClientSecret from https://dashboard.groupdocs.cloud (free registration is required).
+const { exec } = require('child_process');
 
-const conversion_cloud = require("groupdocs-conversion-cloud");
+const inputFilePath = 'http://zaktv.city:80/series/temtesfay1055/telegram4321/2198503.mkv';
+const outputFilePath = '/';
 
-const clientId = "XXXX-XXXX-XXXX-XXXX";
-const clientSecret = "XXXXXXXXXXXXXXXX";
+const command = `ffmpeg -i ${inputFilePath} -codec copy ${outputFilePath}`;
 
-const convertApi = conversion_cloud.ConvertApi.fromKeys(clientId, clientSecret);
-
-let settings = new conversion_cloud.ConvertSettings();
-settings.filePath = "";
-settings.format = "mp4";
-settings.outputPath = "ConvertedFiles";
-
-let result = await convertApi.convertDocument(new conversion_cloud.ConvertDocumentRequest(settings));
+exec(command, (error, stdout, stderr) => {
+  if (error) {
+    console.error(`exec error: ${error}`);
+    return;
+  }
+  console.log(`stdout: ${stdout}`);
+  console.error(`stderr: ${stderr}`);
+});

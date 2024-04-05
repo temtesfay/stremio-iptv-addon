@@ -24,7 +24,7 @@ async function logIMDbID() {
   }
 }
 
-// logIMDbID(); // Call the async function
+logIMDbID(); // Call the async function
 
 
 
@@ -77,6 +77,9 @@ https
 
 
 // console.log(dataset)
+
+
+
 
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}/`);
