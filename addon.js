@@ -27,6 +27,10 @@ const manifest = {
         {
             type: 'series',
             id: 'StremioIPTV'
+        },
+        {
+            type: 'TV Channel',
+            id: 'StremioIPTV'
         }
     ],
 
@@ -47,14 +51,23 @@ const dataset = {
     "tt0137523": { name: "Fight Club", type: "movie", url: "http://zaktv.city:80/movie/temtesfay1055/telegram4321/1927002.mkv" }, // redirects to Netflix
     "tt0120737": { name: "The Lord of the Rings: The Fellowship of the Ring", type: "movie", url: "http://zaktv.city:80/movie/temtesfay1055/telegram4321/1932197.mp4" }, // redirects to Netflix
     "tt0096697:35:1": { name: "The Simpsons", type: "series", url: "http://zaktv.city:80/series/temtesfay1055/telegram4321/2106939.mkv" }, 
+    'tt0411008:6:16': {name:'Lost', type:'series',url:'http://zaktv.city:80/series/temtesfay1055/telegram4321/2198493.mkv'},
+    'tt0411008:6:16': {name:'Lost', type:'series',url:'http://zaktv.city:80/series/temtesfay1055/telegram4321/2198493.mkv'},
+    'tt0411008:6:17': {name:'Lost', type:'series',url:'http://zaktv.city:80/series/temtesfay1055/telegram4321/2198503.mkv'},
+    
 };
+
+const dataset2 = {
+    'Sky Sports UHD': {name: 'Sky Sports Premier UHD Nigga', type:"channel" ,url:'ttp://zaktv.city:80/temtesfay1055/telegram4321/1836065.m3u8'},
+    "unknown": { name: "The Simpsons", type: "series", url: "http://zaktv.city:80/series/temtesfay1055/telegram4321/2106939.mkv" },
+}
 
 // Streams handler
 builder.defineStreamHandler(function(args) {
     if (dataset[args.id]) {
         return Promise.resolve({ streams: [dataset[args.id]] });
     } else {
-        return Promise.resolve({ streams: [] });
+        return Promise.resolve({ streams: [dataset2[args.id]] });
     }
 })
 

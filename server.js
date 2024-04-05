@@ -5,41 +5,28 @@ const axios = require('axios');
 const app = express();
 const port = 9000;
 
-// Define an async function to perform the API request
 async function fetchIMDbID(query) {
-  const options = {
-    method: 'GET',
-    url: 'https://imdb-api12.p.rapidapi.com/search',
-    params: {
-      query: query
-    },
-    headers: {
-      'X-RapidAPI-Key': '46ae53ee2fmsha23a061eb2aa0f4p1d95f5jsne40c433c9756',
-      'X-RapidAPI-Host': 'imdb-api12.p.rapidapi.com'
-    }
-  };
-
   try {
-    const response = await axios.request(options);
-    // console.log(response.data.results[0].id);
-    return response.data.results[0].id
+    const response = await axios.get(`https://www.omdbapi.com/?t=${query}&apikey=f2ff5bca`);
+    // Consider handling the case where imdbID is not present
+    return response.data.imdbID || 'unknown'; // More consistent handling of missing imdbID
   } catch (error) {
     console.error(error);
-    return 'unknown'
+    return 'unknown';
   }
 }
-function extractShowDetails(showString) {
-  const match = showString.match(/(.+) S(\d+)E(\d+)/);
-  if (match) {
-    return {
-      showName: match[1],
-      season: match[2],
-      episode: match[3]
-    };
-  } else {
-    return null;
+async function logIMDbID() {
+  try {
+    const imdbID = await fetchIMDbID('Breaking Basdfsdfsdfd');
+    console.log(imdbID); // This will log the actual IMDb ID once the promise resolves
+  } catch (error) {
+    console.error('Failed to fetch IMDb ID:', error);
   }
 }
+
+// logIMDbID(); // Call the async function
+
+
 
 
 const dataset = {
@@ -66,20 +53,20 @@ https
       const playlist = Buffer.concat(data).toString()
       const result = parser.parse(playlist)
       const results = result.items
-    //   console.log(results)
       results.forEach(result => {
-        //  console.log(result)
         if (result.url.includes("movie")) {   
-          // console.log(result.name, result.url) 
-          //  const nameUnfromat = extractShowDetails(result.name)
-          //  const name = normalizeShowDetails(nameUnfromat)
-            // console.log(result.name, result.url) 
-            // Adding a new item
-            // dataset[fetchIMDbID(result.name)] = {
-            //   name: result.name,
-            //   type: "movie",
-            //   url: result.url
-            // };  
+          const title = result.name.slice(0, -7);
+          // fetchIMDbID(title).then(imdbID => {
+          //   console.log(title, imdbID, result.url); // This will log the title, IMDb ID, and URL
+          // }).catch(error => {
+          //   console.error('Failed to fetch IMDb ID:', error);
+          // });
+
+                // dataset[imdbID] = {
+                //   name: result.name,
+                //   type: "movie",
+                //   url: result.url
+                // };  
         }
       });
     })
@@ -88,6 +75,8 @@ https
     console.error(err.message)
   })
 
+
+// console.log(dataset)
 
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}/`);
