@@ -1,4 +1,8 @@
+
 const { addonBuilder } = require("stremio-addon-sdk");
+const axios = require('axios');
+const https = require('https');
+const parser = require('iptv-playlist-parser');
 
 const manifest = {
     "id": "org.stremio.stremioiptv",
@@ -29,9 +33,9 @@ const manifest = {
             id: 'StremioIPTV'
         },
         {
-            type: 'TV Channel',
+            type: 'comedy',
             id: 'StremioIPTV'
-        }
+        },
     ],
 
     // prefix of item IDs (ie: "tt0032138")
@@ -52,22 +56,75 @@ const dataset = {
     "tt0120737": { name: "The Lord of the Rings: The Fellowship of the Ring", type: "movie", url: "http://zaktv.city:80/movie/temtesfay1055/telegram4321/1932197.mp4" }, // redirects to Netflix
     "tt0096697:35:1": { name: "The Simpsons", type: "series", url: "http://zaktv.city:80/series/temtesfay1055/telegram4321/2106939.mkv" }, 
     'tt0411008:6:16': {name:'Lost', type:'series',url:'http://zaktv.city:80/series/temtesfay1055/telegram4321/2198493.mkv'},
-    'tt0411008:6:16': {name:'Lost', type:'series',url:'http://zaktv.city:80/series/temtesfay1055/telegram4321/2198493.mkv'},
     'tt0411008:6:17': {name:'Lost', type:'series',url:'http://zaktv.city:80/series/temtesfay1055/telegram4321/2198503.mkv'},
     
 };
 
-const dataset2 = {
-    'Sky Sports UHD': {name: 'Sky Sports Premier UHD Nigga', type:"channel" ,url:'ttp://zaktv.city:80/temtesfay1055/telegram4321/1836065.m3u8'},
-    "unknown": { name: "The Simpsons", type: "series", url: "http://zaktv.city:80/series/temtesfay1055/telegram4321/2106939.mkv" },
-}
+async function fetchIMDbIDOrTitle(title) {
+    try {
+      const query = encodeURIComponent(title);
+      const url = `https://www.omdbapi.com/?t=${query}&apikey=1ff254ef`;
+      const response = await axios.get(url);
+    //   console.log(query)
+  
+      if (response.data && response.data.Response === "True") {
+        // If the IMDb ID is found, return it
+        // console.log(response.data.imdbID)
+        return response.data.imdbID;
+      } else {
+        // If not found, return the original title
+        // console.log(`IMDb ID not found for "${title}", using title as key.`);
+        return title;
+      }
+    } catch (error) {
+      // In case of an error with the request, log the error and return the title
+    //   console.error(`Error fetching IMDb ID for "${title}":`, error.message);
+      return title;
+    }
+  }
+
+// fetchIMDbIDOrTitle('Eating Raoul');
+
+https.get('https://zaktv.city/get.php?username=temtesfay1055&password=telegram4321&type=m3u_plus&output=ts', res => {
+  let data = [];
+
+  res.on('data', chunk => {
+    data.push(chunk);
+  });
+
+  res.on('end', async () => {
+    const playlist = Buffer.concat(data).toString();
+    const result = parser.parse(playlist);
+    const results = result.items;  
+    for (const item of results) {
+      if (item.url.includes("movie") && item.group.title == 'Comedy') {
+        const title = item.name.slice(0, -7); // Extract title
+        // console.log(title)
+        // Fetch IMDb ID or fallback to title
+        const key = await fetchIMDbIDOrTitle(title);
+        dataset[key] = {
+          name: title,
+          type: "movie",
+          url: item.url
+        };
+      }
+    }
+  
+    // Log the dataset after it has been fully populated
+    console.log(dataset);
+  });
+})
+.on('error', err => {
+  console.error(err.message);
+});
+
 
 // Streams handler
 builder.defineStreamHandler(function(args) {
     if (dataset[args.id]) {
         return Promise.resolve({ streams: [dataset[args.id]] });
     } else {
-        return Promise.resolve({ streams: [dataset2[args.id]] });
+        return Promise.resolve({ streams: [] });
     }
 })
 
