@@ -8,6 +8,7 @@ const { promisify } = require('util');
 
 
 const nameToImdbAsync = promisify(nameToImdb);
+const cinemeta = require("cinemeta.js")
 
 const getMovie = "&action=get_vod_streams";
 const getSeries = '&action=get_series';
@@ -42,8 +43,8 @@ const manifest = {
     // set catalogs, we'll have 2 catalogs in this case, 1 for movies and 1 for series
     "catalogs": [
         {
-            type: 'LiveTV',
-            id: 'StremioIPTV',
+            type: 'livetv',
+            id: 'LiveTVCatalog',
             "extra": [
                 {
                   "name": "skip",
@@ -53,29 +54,27 @@ const manifest = {
         },
         {
             type: 'movie',
-            id: 'StremioIPTV',
+            id: 'MovieCatalog',
             "extra": [
                 {
                   "name": "skip",
                   "isRequired": false
                 },
-                // {
-                //     "name": "genre",
-                //     "options": [ "Drama", "Action","Comedy","Adventure","Animation","Biography","Crime","Documentary","Drama","Family","Fantasy","History","Horror","Mystery","Romance","Sci-Fi","Sport","Thriller","War","Western", ],
-                //     "isRequired": false
-                //   }
+                // { "name": "search", "isRequired": false },
               ]
         },
         {
             type: 'series',
-            id: 'StremioIPTV',
+            id: 'SeriesCatalog',
             "extra": [
                 {
                   "name": "skip",
                   "isRequired": false
-                }
+                },
+                // { "name": "search", "isRequired": false },
               ]
         },
+        
     ],
 
     // prefix of item IDs (ie: "tt0032138")
@@ -99,7 +98,6 @@ const dataset = {
     
 };
 
-
 async function fetchMovie(endpoint) {
   try {
       const url = `${apiURL}${endpoint}`;
@@ -109,7 +107,7 @@ async function fetchMovie(endpoint) {
       if (results) {
           for (const result of results) {
               // if (result.genre == 'Comedy') { // Assuming you want to process all titles, not just 'Pulp Fiction'
-                  const title = result.title + ' ' + result.year;
+                  const title = result.title;
                   const streamID = result.stream_id;
                   const containerExtension = result.container_extension;
                   const streamURL = `${normalURL}/${streamID}.${containerExtension}`;
@@ -118,15 +116,31 @@ async function fetchMovie(endpoint) {
                       // Use the promisified nameToImdb function
                       const imdbID = await nameToImdbAsync(title);
                       // Update dataset with the obtained IMDb ID or title
-                      dataset[imdbID] = {
-                          name: title,
-                          type: "movie", // Assuming type here; adjust as needed
-                          url: streamURL
-                      };
+
+                      cinemeta.searchMovie(title).then(got =>{
+                        got.forEach(movie=> {
+                            if (movie.name === title && movie.year.substring(0,4) == result.year) {
+                                // console.log(movie.name, movie.year)
+                                dataset[movie.imdb_id] = {
+                                    name: title,
+                                    type: "movie", // Assuming type here; adjust as needed
+                                    url: streamURL
+                                };
+                            }
+                            
+                        });
+                    })
+
+
+                    //   dataset[imdbID] = {
+                    //       name: title,
+                    //       type: "movie", // Assuming type here; adjust as needed
+                    //       url: streamURL
+                    //   };
                   } catch (err) {
                       console.error(`Error fetching IMDb ID for "${title}":`, err.message);
                       // Fallback to using title if IMDb ID fetch fails
-                      dataset[`dd${title}`] = {
+                      dataset[`${title}`] = {
                           name: title,
                           type: "movie",
                           url: streamURL
@@ -200,7 +214,7 @@ builder.defineStreamHandler(function(args) {
     if (dataset[args.id]) {
         return Promise.resolve({ streams: [dataset[args.id]] });
     } else {
-        return Promise.resolve({ streams: [dataset[args.id]] });
+        return Promise.resolve({ streams: [] });
     }
 })
 

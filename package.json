@@ -20,6 +20,7 @@
     "call-bind": "^1.0.7",
     "child_process": "^1.0.2",
     "chokidar": "^3.6.0",
+    "cinemeta.js": "^1.0.0",
     "concat-map": "^0.0.1",
     "content-disposition": "^0.5.4",
     "content-type": "^1.0.5",
