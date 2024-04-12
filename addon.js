@@ -3,6 +3,19 @@ const { addonBuilder } = require("stremio-addon-sdk");
 const axios = require('axios');
 const https = require('https');
 const parser = require('iptv-playlist-parser');
+const nameToImdb = require("name-to-imdb");
+const { promisify } = require('util');
+
+
+const nameToImdbAsync = promisify(nameToImdb);
+
+const getMovie = "&action=get_vod_streams";
+const getSeries = '&action=get_series';
+const getSeriesEpisode = '&action=get_series_info&series_id='
+const apiURL = "https://zaktv.city/player_api.php?username=temtesfay1055&password=telegram4321";
+const normalURL = 'http://zaktv.city:80/movie/temtesfay1055/telegram4321';
+const normalURLSeries = 'http://zaktv.city:80/series/temtesfay1055/telegram4321'
+
 
 const manifest = {
     "id": "org.stremio.stremioiptv",
@@ -11,12 +24,13 @@ const manifest = {
     "name": "StremioIPTV",
     "description": "Integrate VOD content/streams from your IPTV service into Stremio's popular catalogs.",
 
-    "icon": "URL to 256x500 monochrome png icon", 
+    "icon": "https://linuxmasterclub.com/wp-content/uploads/2020/06/Stremio-logo.png", 
     "background": "URL to 1024x786 png/jpg background",
 
     // set what type of resources we will return
     "resources": [
         "catalog",
+        // "meta",
         "stream"
     ],
 
@@ -24,6 +38,16 @@ const manifest = {
 
     // set catalogs, we'll have 2 catalogs in this case, 1 for movies and 1 for series
     "catalogs": [
+        {
+            type: 'LiveTV',
+            id: 'StremioIPTV',
+            "extra": [
+                {
+                  "name": "skip",
+                  "isRequired": false
+                }
+              ]
+        },
         {
             type: 'movie',
             id: 'StremioIPTV',
@@ -49,24 +73,12 @@ const manifest = {
                 }
               ]
         },
-        // {
-        //     type: 'comedy',
-        //     id: 'StremioIPTV',
-        //     "extra": [
-        //         {
-        //           "name": "skip",
-        //           "isRequired": false
-        //         }
-        //       ]
-        // },
     ],
 
     // prefix of item IDs (ie: "tt0032138")
-    "idPrefixes": [ "tt" ]
+    "idPrefixes": [ "tt", "channel:"]
 
 };
-
-
 
 const builder = new addonBuilder(manifest);
 
@@ -80,123 +92,106 @@ const dataset = {
     "tt0096697:35:1": { name: "The Simpsons", type: "series", url: "http://zaktv.city:80/series/temtesfay1055/telegram4321/2106939.mkv" }, 
     'tt0411008:6:16': {name:'Lost', type:'series',url:'http://zaktv.city:80/series/temtesfay1055/telegram4321/2198493.mkv'},
     'tt0411008:6:17': {name:'Lost', type:'series',url:'http://zaktv.city:80/series/temtesfay1055/telegram4321/2198503.mkv'},
+    'channel:1':{name: 'Sky Sports Main Event UHD', type:'LiveTV', url:'http://zaktv.city:80/temtesfay1055/telegram4321/1836073.m3u8'} 
     
 };
 
-async function fetchIMDbIDOrTitle(title) {
-    try {
-      const query = encodeURIComponent(title);
-      const url = `https://www.omdbapi.com/?t=${query}&apikey=1ff254ef`;
+
+async function fetchMovie(endpoint) {
+  try {
+      const url = `${apiURL}${endpoint}`;
       const response = await axios.get(url);
-    //   console.log(query)
-  
-      if (response.data && response.data.Response === "True") {
-        // If the IMDb ID is found, return it
-        // console.log(response.data.imdbID)
-        return response.data.imdbID;
-      } else {
-        // If not found, return the original title
-        // console.log(`IMDb ID not found for "${title}", using title as key.`);
-        return title;
-      }
-    } catch (error) {
-      // In case of an error with the request, log the error and return the title
-    //   console.error(`Error fetching IMDb ID for "${title}":`, error.message);
-      return title;
-    }
+      const results = response.data;
+      
+      if (results) {
+          for (const result of results) {
+              //    console.log(result)
+              // if (result.genre == 'Comedy') { // Assuming you want to process all titles, not just 'Pulp Fiction'
+                  const title = result.name;
+                  const streamID = result.stream_id;
+                  const containerExtension = result.container_extension;
+                  const streamURL = `${normalURL}/${streamID}.${containerExtension}`;
+
+                  try {
+                      // Use the promisified nameToImdb function
+                      const imdbID = await nameToImdbAsync(title);
+                      // Update dataset with the obtained IMDb ID or title
+                      dataset[imdbID] = {
+                          name: title,
+                          type: "movie", // Assuming type here; adjust as needed
+                          url: streamURL
+                      };
+                  } catch (err) {
+                      console.error(`Error fetching IMDb ID for "${title}":`, err.message);
+                      // Fallback to using title if IMDb ID fetch fails
+                      dataset[`dd${title}`] = {
+                          name: title,
+                          type: "movie",
+                          url: streamURL
+                      };
+                  }
+              }
+          }
+  } catch (error) {
+      console.error(`Failed to fetch movies: ${error.message}`);
   }
+}
 
-async function fetchIMDbEpisode(title,season,episode) {
-    try {
-      const query = title;
-      const query2 = season;
-      const query3 = episode;
+async function fetchShow(showInfo, EpisodeInfo) {
+  try {
+      const ShowUrl = `${apiURL}${showInfo}`;
+      const response = await axios.get(ShowUrl);
+      const showResults = response.data;
+      
+      for (const result of showResults) {
+          const title = result.name;
+          const series_id = result.series_id;
+          
+          if (title) { // Specific title check
+              try {
+                  const imdbID = await nameToImdbAsync(title);
+                  const EpisodeUrl = `${apiURL}${EpisodeInfo}${series_id}`;
+                  const episodeResponse = await axios.get(EpisodeUrl);
+                  const episodeResults = episodeResponse.data.episodes;
+                  // console.log(episodeResults);
 
-      const url = `https://www.omdbapi.com/?t=${query}&${query2}&${query3}&apikey=1ff254ef`;
-      const response = await axios.get(url);
-      console.log(url)
-  
-      if (response.data && response.data.Response === "True") {
-        // If the IMDb ID is found, return it
-        console.log(response.data.Season)
-        var showID = response.data.seriesID
-        var season = response.data.Season
-        var episode = response.data.Episode
-        var episodeInfo = `${showID}:${season}:${episode}`
-        // console.log(episodeInfo)
-        return episodeInfo;
+                  // Iterate over each season
+                  for (const season in episodeResults) {
+                      const episodes = episodeResults[season];
+                      // Iterate over each episode in the current season
+                      episodes.forEach(episode => {
+                          // console.log(`Season: ${season}, Episode: ${episode.episode_num}, Title: ${episode.title}`);
+                          // Assuming each episode object has an episode number and title
 
-      } else {
-        // If not found, return the original title
-        // console.log(`IMDb ID not found for "${title}", using title as key.`);
-        console.log(title)
-        return title;
+                          // You might need to generate or have an IMDb ID for each episode here
+                          // For demonstration, we'll use a combination of series_id, season, and episode number
+                          const episodeImdbID = `s${series_id}e${season}${episode.episode_num}`; // This is a placeholder
+
+                          // Update dataset with the obtained IMDb ID or placeholder
+                          dataset[`${imdbID}:${season}:${episode.episode_num}`] = {
+                              name: `${title}`,
+                              type: "series", // Assuming type here; adjust as needed
+                              url: `${normalURLSeries}/${episode.id}.${episode.container_extension}` // Assuming there's a direct URL for the episode
+                          };
+                      });
+                  }
+
+              } catch (err) {
+                  console.error(`Error processing episode for "${title}":`, err.message);
+              }
+          }
       }
-    } catch (error) {
-      // In case of an error with the request, log the error and return the title
-    //   console.error(`Error fetching IMDb ID for "${title}":`, error.message);
-      return title;
-    }
+  } catch (error) {
+      console.error(`Failed to fetch shows: ${error.message}`);
   }
-// fetchIMDbEpisode('South-Park','Season=1','Episode=1')
-// https://www.omdbapi.com/?t=Game%20of%20Thrones&Season=01&Episode=01&apikey=1ff254ef
-// https://www.omdbapi.com/?t=Game%20of%20Thrones&Season%3D1&Episode%3D1&apikey=1ff254ef
+}
 
-// fetchIMDbIDOrTitle('Eating Raoul');
+fetchMovie(getMovie).then(() => {
+  console.log("Dataset updated:", dataset);
+});
 
-https.get('https://zaktv.city/get.php?username=temtesfay1055&password=telegram4321&type=m3u_plus&output=ts', res => {
-  let data = [];
-
-  res.on('data', chunk => {
-    data.push(chunk);
-  });
-
-  res.on('end', async () => {
-    approvedGroups = ['Comedy','Action','Animation','Adventure','Action & Adventure']
-    const playlist = Buffer.concat(data).toString();
-    const result = parser.parse(playlist);
-    const results = result.items;  
-    for (const item of results) {
-      if (item.url.includes("movie") && item.group.title == 'Comedy') {
-        const title = item.name.slice(0, -7); // Extract title
-        // console.log(title)
-        // Fetch IMDb ID or fallback to title
-        const key = await fetchIMDbIDOrTitle(title);
-        dataset[key] = {
-          name: title,
-          type: "movie",
-          url: item.url
-        };
-      }
-      if (item.url.includes("series")) {
-        // console.log(title)
-
-        const episodeInfo = item.name.slice(-7)
-        const title = item.name.slice(0, -7); // Extract title
-        const newTitle = title.replaceAll(' ', '-')
-
-        const season = episodeInfo.slice(1,2) + 'eason=' + episodeInfo.slice(2,4)
-        const episode = episodeInfo.slice(4,5) + 'pisode=' + episodeInfo.slice(5,7)
-
-
-        // console.log(newTitle)
-        // Fetch IMDb ID or fallback to title
-
-        const key = await fetchIMDbEpisode(newTitle,season,episode);
-        dataset[key] = {
-          name: title,
-          type: "series",
-          url: item.url
-        };
-      }
-    }
-  
-    // Log the dataset after it has been fully populated
-    console.log(dataset);
-  });
-})
-.on('error', err => {
-  console.error(err.message);
+fetchShow(getSeries,getSeriesEpisode).then(() => {
+  console.log("Dataset updated:", dataset);
 });
 
 
@@ -232,5 +227,7 @@ builder.defineCatalogHandler(function(args, cb) {
 
     return Promise.resolve({ metas: metas })
 })
+
+
 
 module.exports = builder.getInterface()
