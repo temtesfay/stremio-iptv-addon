@@ -15,6 +15,9 @@ const getSeriesEpisode = '&action=get_series_info&series_id='
 const apiURL = "https://zaktv.city/player_api.php?username=temtesfay1055&password=telegram4321";
 const normalURL = 'http://zaktv.city:80/movie/temtesfay1055/telegram4321';
 const normalURLSeries = 'http://zaktv.city:80/series/temtesfay1055/telegram4321'
+const userSelectedLiveTvCategories = [];
+const userSelectedVODCategories = [];
+const userSelectedSeriesCategories = [];
 
 
 const manifest = {
@@ -105,9 +108,8 @@ async function fetchMovie(endpoint) {
       
       if (results) {
           for (const result of results) {
-              //    console.log(result)
               // if (result.genre == 'Comedy') { // Assuming you want to process all titles, not just 'Pulp Fiction'
-                  const title = result.name;
+                  const title = result.title + ' ' + result.year;
                   const streamID = result.stream_id;
                   const containerExtension = result.container_extension;
                   const streamURL = `${normalURL}/${streamID}.${containerExtension}`;
@@ -144,10 +146,11 @@ async function fetchShow(showInfo, EpisodeInfo) {
       const showResults = response.data;
       
       for (const result of showResults) {
-          const title = result.name;
+          const title = result.title + ' ' + result.year;
+        //   console.log(title)
           const series_id = result.series_id;
           
-          if (title) { // Specific title check
+        //   if (title) { // Specific title check
               try {
                   const imdbID = await nameToImdbAsync(title);
                   const EpisodeUrl = `${apiURL}${EpisodeInfo}${series_id}`;
@@ -160,11 +163,8 @@ async function fetchShow(showInfo, EpisodeInfo) {
                       const episodes = episodeResults[season];
                       // Iterate over each episode in the current season
                       episodes.forEach(episode => {
+                        // console.log(imdbID)
                           // console.log(`Season: ${season}, Episode: ${episode.episode_num}, Title: ${episode.title}`);
-                          // Assuming each episode object has an episode number and title
-
-                          // You might need to generate or have an IMDb ID for each episode here
-                          // For demonstration, we'll use a combination of series_id, season, and episode number
                           const episodeImdbID = `s${series_id}e${season}${episode.episode_num}`; // This is a placeholder
 
                           // Update dataset with the obtained IMDb ID or placeholder
@@ -180,7 +180,7 @@ async function fetchShow(showInfo, EpisodeInfo) {
                   console.error(`Error processing episode for "${title}":`, err.message);
               }
           }
-      }
+    //   } if statement closing parenthesis
   } catch (error) {
       console.error(`Failed to fetch shows: ${error.message}`);
   }
