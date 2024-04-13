@@ -8,7 +8,8 @@ const { promisify } = require('util');
 
 
 const nameToImdbAsync = promisify(nameToImdb);
-const cinemeta = require("cinemeta.js")
+const cinemeta = require("cinemeta.js");
+const omdb = new (require('omdbapi'))('1ff254ef');
 
 const getMovie = "&action=get_vod_streams";
 const getSeries = '&action=get_series';
@@ -160,7 +161,7 @@ async function fetchShow(showInfo, EpisodeInfo) {
       const showResults = response.data;
       
       for (const result of showResults) {
-          const title = result.title + ' ' + result.year;
+          const title = result.title;
         //   console.log(title)
           const series_id = result.series_id;
           
@@ -180,13 +181,25 @@ async function fetchShow(showInfo, EpisodeInfo) {
                         // console.log(imdbID)
                           // console.log(`Season: ${season}, Episode: ${episode.episode_num}, Title: ${episode.title}`);
                           const episodeImdbID = `s${series_id}e${season}${episode.episode_num}`; // This is a placeholder
-
+                          console.log(imdbID)
                           // Update dataset with the obtained IMDb ID or placeholder
-                          dataset[`${imdbID}:${season}:${episode.episode_num}`] = {
-                              name: `${title}`,
-                              type: "series", // Assuming type here; adjust as needed
-                              url: `${normalURLSeries}/${episode.id}.${episode.container_extension}` // Assuming there's a direct URL for the episode
-                          };
+                          omdb.search({
+                            search: title,  // required
+                            type: 'series',             // optionnal  ['series', 'episode', 'movie']
+                            year: result.year,               // optionnal
+                            page: '1'                   // optionnal (1 to 100)
+                        }).then(res => {
+                            // console.log('got response:', res[0]);
+                             const showResult = res[0]
+                             const showIMDB = showResult.imdbid;
+                             dataset[`${showIMDB}:${season}:${episode.episode_num}`] = {
+                                name: `${title}`,
+                                type: "series", // Assuming type here; adjust as needed
+                                url: `${normalURLSeries}/${episode.id}.${episode.container_extension}` // Assuming there's a direct URL for the episode
+                            };
+
+                        }).catch(console.error);
+                        console.log(title)
                       });
                   }
 
