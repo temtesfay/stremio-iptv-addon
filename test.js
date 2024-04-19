@@ -1,7 +1,8 @@
 const axios = require('axios');
-const nameToImdb = require("name-to-imdb");
+// const nameToImdb = require("name-to-imdb");
 
 const cinemeta = require("cinemeta.js");
+const { error } = require('console');
 const omdb = new (require('omdbapi'))('1ff254ef');
 
 const oldMovie = 'The Office';
@@ -13,13 +14,24 @@ const newMovieYear = '2024'
 
 
 omdb.search({
-    search: 'Shogun',  // required
+    search: 'Ocean Girl',  // required
     type: 'series',             // optionnal  ['series', 'episode', 'movie']
-    year: '1978',               // optionnal
+    year: '1994',               // optionnal
     page: '1'                   // optionnal (1 to 100)
 }).then(res => {
-    console.log('got response:', res[0]);
+    console.log('got response:',res);
+    
 }).catch(console.error);
+
+
+
+
+
+
+
+
+
+
 
 // omdb.get({
 //     id: 'tt0944947',            // optionnal (requires imdbid or title)
@@ -44,21 +56,3 @@ omdb.search({
 
 
 
-
-
-// cinemeta.searchSeries(oldMovie).then(got =>{
-//     got.forEach(show=> {
-//         if (show.year.substring(0,4) == oldMovieYear) {
-//              console.log(show.name, show.year)
-//             // dataset[movie.imdb_id] = {
-//             //     name: title,
-//             //     type: "movie", // Assuming type here; adjust as needed
-//             //     url: streamURL
-//             // };
-//         }
-//     });
-// })
-
-// cinemeta.searchSeries(oldMovie).then(got =>{
-//     console.log(got)
-// })
